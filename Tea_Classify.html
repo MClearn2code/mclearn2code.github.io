@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>诗词名字拖拽展示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 15px;
+            min-height: 100vh;
+            font-size: 14px; /* 整体缩小字体 */
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 1.8rem; /* 缩小标题 */
+        }
+        
+        .description {
+            color: #7f8c8d;
+            font-size: 0.95rem; /* 缩小描述文字 */
+            max-width: 800px;
+            margin: 0 auto 15px;
+        }
+        
+        .names-container {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr); /* 改为10列 */
+            gap: 10px; /* 缩小间距 */
+            margin-bottom: 30px;
+        }
+        
+        .name-item {
+            padding: 10px 5px; /* 缩小内边距 */
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9rem; /* 缩小字体 */
+            color: white;
+            cursor: grab;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+        
+        .name-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .name-item:active {
+            cursor: grabbing;
+        }
+        
+        .section-title {
+            text-align: center;
+            margin: 20px 0 10px; /* 缩小间距 */
+            color: #2c3e50;
+            font-size: 1.2rem; /* 缩小字体 */
+            border-bottom: 1px solid #3498db;
+            padding-bottom: 5px;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .drop-zone {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px; /* 缩小间距 */
+            margin-bottom: 30px;
+        }
+        
+        .drop-cell {
+            min-height: 150px; /* 缩小高度 */
+            border: 2px dashed #95a5a6;
+            border-radius: 6px;
+            padding: 12px;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px; /* 缩小间距 */
+            align-content: flex-start;
+        }
+        
+        .drop-cell.highlight {
+            border-color: #3498db;
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        .poets-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px; /* 缩小间距 */
+        }
+        
+        .poet-cell {
+            min-height: 250px; /* 保持原有大小 */
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            padding: 12px;
+            background-color: rgba(255, 255, 255, 0.8);
+            position: relative; /* 为绝对定位的子元素提供参考 */
+        }
+        
+        .poet-cell h3 {
+            text-align: center;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            border-bottom: 1px solid #ecf0f1;
+            padding-bottom: 4px;
+            font-size: 1rem; /* 缩小字体 */
+        }
+        
+        .dropped-name {
+            padding: 6px 10px; /* 缩小内边距 */
+            border-radius: 4px;
+            font-size: 0.85rem; /* 缩小字体 */
+            color: white;
+            cursor: grab;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: absolute; /* 允许自由定位 */
+        }
+        
+        .dropped-name:active {
+            cursor: grabbing;
+        }
+        
+        .delete-zone {
+            margin: 20px auto;
+            width: 180px;
+            height: 70px;
+            border: 2px dashed #e74c3c;
+            border-radius: 8px;
+            background-color: rgba(231, 76, 60, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #e74c3c;
+            font-weight: bold;
+            font-size: 1rem; /* 缩小字体 */
+            transition: all 0.3s;
+        }
+        
+        .delete-zone.highlight {
+            background-color: rgba(231, 76, 60, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .reset-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 0.9rem; /* 缩小字体 */
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .reset-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        @media (max-width: 768px) {
+            .names-container {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            .drop-zone, .poets-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .names-container, .drop-zone, .poets-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>诗词名字拖拽展示</h1>
+            <p class="description">将上方的名字拖拽到下方的表格中，顶部名字拖拽为复制，中部和下方表格内名字拖拽为移动。</p>
+        </header>
+        
+        <h2 class="section-title">诗词名字</h2>
+        <div class="names-container" id="names-container">
+            <!-- 名字将通过JavaScript动态生成 -->
+        </div>
+        
+        <h2 class="section-title">名字放置区</h2>
+        <div class="drop-zone">
+            <div class="drop-cell" id="drop-cell-1"></div>
+            <div class="drop-cell" id="drop-cell-2"></div>
+            <div class="drop-cell" id="drop-cell-3"></div>
+            <div class="drop-cell" id="drop-cell-4"></div>
+        </div>
+        
+        <h2 class="section-title">诗人作品区</h2>
+        <div class="poets-container">
+            <div class="poet-cell">
+                <h3>雨师</h3>
+            </div>
+            <div class="poet-cell">
+                <h3>颜真卿</h3>
+            </div>
+            <div class="poet-cell">
+                <h3>怀素</h3>
+            </div>
+            <div class="poet-cell">
+                <h3>张志和</h3>
+            </div>
+            <div class="poet-cell">
+                <h3>李齐物</h3>
+            </div>
+        </div>
+        
+        <h2 class="section-title">删除区</h2>
+        <div class="delete-zone" id="delete-zone">
+            拖拽至此删除
+        </div>
+        
+        <button class="reset-btn" id="reset-btn">重置所有区域</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 定义名字和颜色
+            const names = [
+                { text: "红袖香", color: "#e74c3c" },
+                { text: "橙实甜", color: "#f39c12" },
+                { text: "黄箬笠", color: "#f1c40f" },
+                { text: "绿芽尖", color: "#2ecc71" },
+                { text: "青听雨", color: "#1abc9c" },
+                { text: "蓝观烟", color: "#3498db" },
+                { text: "紫步日", color: "#9b59b6" },
+                { text: "黑足年", color: "#2c3e50" },
+                { text: "白叶清", color: "#ecf0f1", textColor: "#2c3e50" },
+                { text: "一花眠", color: "#d35400" }
+            ];
+            
+            const namesContainer = document.getElementById('names-container');
+            const dropCells = document.querySelectorAll('.drop-cell');
+            const poetCells = document.querySelectorAll('.poet-cell');
+            const deleteZone = document.getElementById('delete-zone');
+            const resetBtn = document.getElementById('reset-btn');
+            
+            // 初始化名字区域
+            names.forEach(name => {
+                const nameElement = document.createElement('div');
+                nameElement.className = 'name-item';
+                nameElement.textContent = name.text;
+                nameElement.style.backgroundColor = name.color;
+                if (name.textColor) {
+                    nameElement.style.color = name.textColor;
+                }
+                nameElement.draggable = true;
+                
+                // 设置拖拽事件 - 顶部名字拖拽为复制
+                nameElement.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', JSON.stringify({
+                        text: name.text,
+                        color: name.color,
+                        textColor: name.textColor || 'white',
+                        source: 'original' // 标记来源为原始名字
+                    }));
+                });
+                
+                namesContainer.appendChild(nameElement);
+            });
+            
+            // 为放置区域设置拖拽事件
+            [...dropCells].forEach(cell => {
+                cell.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.classList.add('highlight');
+                });
+                
+                cell.addEventListener('dragleave', function() {
+                    this.classList.remove('highlight');
+                });
+                
+                cell.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('highlight');
+                    
+                    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    
+                    // 如果是原始名字，则复制；否则移动
+                    if (data.source === 'original') {
+                        addNameToCell(this, data);
+                    } else {
+                        // 移动名字：从原位置删除，添加到新位置
+                        const draggedElement = document.querySelector('.dragging');
+                        if (draggedElement) {
+                            // 对于放置区，使用相对定位而不是绝对定位
+                            draggedElement.style.position = 'static';
+                            this.appendChild(draggedElement);
+                            draggedElement.classList.remove('dragging');
+                        }
+                    }
+                });
+            });
+            
+            // 为诗人作品区设置拖拽事件 - 允许自由放置
+            [...poetCells].forEach(cell => {
+                cell.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                });
+                
+                cell.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    
+                    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    
+                    // 如果是原始名字，则复制；否则移动
+                    if (data.source === 'original') {
+                        addNameToPoetCell(this, e, data);
+                    } else {
+                        // 移动名字：从原位置删除，添加到新位置
+                        const draggedElement = document.querySelector('.dragging');
+                        if (draggedElement) {
+                            // 计算放置位置
+                            const rect = this.getBoundingClientRect();
+                            const x = e.clientX - rect.left;
+                            const y = e.clientY - rect.top;
+                            
+                            draggedElement.style.left = (x - draggedElement.offsetWidth/2) + 'px';
+                            draggedElement.style.top = (y - draggedElement.offsetHeight/2) + 'px';
+                            
+                            this.appendChild(draggedElement);
+                            draggedElement.classList.remove('dragging');
+                        }
+                    }
+                });
+            });
+            
+            // 删除区设置
+            deleteZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('highlight');
+            });
+            
+            deleteZone.addEventListener('dragleave', function() {
+                this.classList.remove('highlight');
+            });
+            
+            deleteZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('highlight');
+                
+                // 删除拖拽的元素
+                const draggedElement = document.querySelector('.dragging');
+                if (draggedElement && draggedElement.parentNode) {
+                    draggedElement.parentNode.removeChild(draggedElement);
+                }
+            });
+            
+            // 添加名字到放置区的函数 - 使用相对定位
+            function addNameToCell(cell, data) {
+                const nameElement = document.createElement('div');
+                nameElement.className = 'dropped-name';
+                nameElement.textContent = data.text;
+                nameElement.style.backgroundColor = data.color;
+                nameElement.style.color = data.textColor;
+                nameElement.draggable = true;
+                nameElement.style.position = 'static'; // 使用默认定位
+                
+                // 设置拖拽事件 - 放置后的名字拖拽为移动
+                nameElement.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', JSON.stringify({
+                        text: data.text,
+                        color: data.color,
+                        textColor: data.textColor,
+                        source: 'dropped' // 标记来源为已放置的名字
+                    }));
+                    this.classList.add('dragging');
+                });
+                
+                nameElement.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                });
+                
+                cell.appendChild(nameElement);
+            }
+            
+            // 添加名字到诗人作品区的函数 - 允许自由放置
+            function addNameToPoetCell(cell, e, data) {
+                const nameElement = document.createElement('div');
+                nameElement.className = 'dropped-name';
+                nameElement.textContent = data.text;
+                nameElement.style.backgroundColor = data.color;
+                nameElement.style.color = data.textColor;
+                nameElement.draggable = true;
+                
+                // 计算放置位置
+                const rect = cell.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                nameElement.style.left = (x - nameElement.offsetWidth/2) + 'px';
+                nameElement.style.top = (y - nameElement.offsetHeight/2) + 'px';
+                
+                // 设置拖拽事件 - 放置后的名字拖拽为移动
+                nameElement.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', JSON.stringify({
+                        text: data.text,
+                        color: data.color,
+                        textColor: data.textColor,
+                        source: 'dropped' // 标记来源为已放置的名字
+                    }));
+                    this.classList.add('dragging');
+                });
+                
+                nameElement.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                });
+                
+                cell.appendChild(nameElement);
+            }
+            
+            // 重置按钮功能
+            resetBtn.addEventListener('click', function() {
+                [...dropCells, ...poetCells].forEach(cell => {
+                    // 清空所有放置的名字，但保留标题
+                    const title = cell.querySelector('h3');
+                    cell.innerHTML = '';
+                    if (title) {
+                        cell.appendChild(title);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
